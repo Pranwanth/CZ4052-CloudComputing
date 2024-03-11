@@ -1,11 +1,26 @@
-import React from 'react'
+import { Link } from 'react-router-dom';
+import ImageUpload from './components/ImageUpload';
+
 
 const App = () => {
-  return (
-    <h1 className="text-3xl font-bold underline">
-      Hello world!
-    </h1>
-  )
-}
+  const handleImageUpload = (file) => {
+    // You can now send this file to the server or process it with OpenAI's API
+    console.log(file);
+  };
 
-export default App
+  return (
+    <div>
+      <h1>HWLLOOOO Welcome to the Meal Nutrient App</h1>
+      <nav>
+        <Link to="/login">Login</Link>
+        <Link to="/register">Register</Link>
+      </nav>
+      <h2>Upload Your Meal Image</h2>
+      <ImageUpload onImageUpload={handleImageUpload} />
+    </div>
+  );
+};
+
+export default App;
+
+
