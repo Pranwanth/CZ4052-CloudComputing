@@ -1,16 +1,31 @@
-import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useState, useContext } from 'react';
 import { UserCircleIcon } from '@heroicons/react/20/solid'; // Assuming you're using Heroicons
+import { AuthContext } from '../contexts/AuthContext'; // Update the import path as needed
 
 const NavBar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { user, signOut } = useContext(AuthContext);
+  const navigate = useNavigate(); // Hook for navigation
+
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      setIsOpen(false); // Close the mobile menu
+      navigate('/'); // Navigate to the Welcome page
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   return (
     <nav className="bg-white-500 border-b-2 border-green-600 shadow-sm py-3 px-5 relative">
+
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center">
           <Link to="/" className="flex items-center">
@@ -18,34 +33,57 @@ const NavBar = () => {
             <span className="text-xl font-serif font-bold text-green-900">Meal Macro Insights</span>
           </Link>
         </div>
+
         <div className="lg:hidden">
           <button onClick={toggleMenu} className="text-green-500 focus:outline-none">
-            {isOpen ? (
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {isOpen ? <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              </svg> 
+              
+              : <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
-              </svg>
-            )}
+              </svg>}
           </button>
-          {isOpen && (
-            <div className="absolute top-full right-0 bg-green border border-green-600 shadow-md py-2 px-4 rounded-md z-10">
+        </div>
+
+        {/* Mobile links */}
+        {isOpen && (
+          <div className="absolute top-full right-0 bg-green border border-green-600 shadow-md py-2 px-4 rounded-md z-10">
+            {user ? (
+              // Show logout for authenticated user
+              <button onClick={handleLogout} className="block text-green-700 hover:text-green-900 transition-colors duration-200">
+                Logout
+              </button>
+            ) : (
+              // Show login/register for unauthenticated user
+              <>
+                <Link to="/login" className="flex items-center text-green-700 hover:text-green-900 transition-colors duration-200">
+                  <UserCircleIcon className="h-6 w-6 mr-2" />
+                  Login
+                </Link>
+                <Link to="/register" className="block text-green-700 hover:text-green-900 transition-colors duration-200">Register</Link>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Desktop links */}
+        <div className="hidden lg:flex lg:items-center lg:space-x-6">
+          {user ? (
+            // Show logout for authenticated user
+            <button onClick={handleLogout} className="flex items-center text-green-700 hover:text-green-900 transition-colors duration-200">
+              Logout
+            </button>
+          ) : (
+            // Show login/register for unauthenticated user
+            <>
               <Link to="/login" className="flex items-center text-green-700 hover:text-green-900 transition-colors duration-200">
                 <UserCircleIcon className="h-6 w-6 mr-2" />
                 Login
               </Link>
-              <Link to="/register" className="block text-green-700 hover:text-green-900 transition-colors duration-200">Register</Link>
-            </div>
+              <Link to="/register" className="text-green-700 hover:text-green-900 transition-colors duration-200">Register</Link>
+            </>
           )}
-        </div>
-        <div className="hidden lg:flex lg:items-center lg:space-x-6">
-          <Link to="/login" className="flex items-center text-green-700 hover:text-green-900 transition-colors duration-200">
-            <UserCircleIcon className="h-6 w-6 mr-2" />
-            Login
-          </Link>
-          <Link to="/register" className="text-green-700 hover:text-green-900 transition-colors duration-200">Register</Link>
         </div>
       </div>
     </nav>
