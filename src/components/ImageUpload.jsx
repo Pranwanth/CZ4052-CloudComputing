@@ -33,13 +33,13 @@ const ImageUpload = ({ onImageUpload }) => {
       />
       <button
         onClick={handleCameraUploadClick}
-        className='text-lg font-semibold appearance-none bg-white pr-10 pl-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:border-green-500 w-full'
+        className='text-lg font-semibold appearance-none bg-white pr-10 pl-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:border-green-500 text-center w-full'
       >
         Take a Picture
-      </button>
+      </button><br></br><br></br>
       <button
         onClick={handleGalleryUploadClick}
-        className='text-lg font-semibold appearance-none bg-white pr-10 pl-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:border-green-500 w-full'
+        className='text-lg font-semibold appearance-none bg-white pr-10 pl-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:border-green-500 text-center w-full'
       >
         Upload from Gallery
       </button>
