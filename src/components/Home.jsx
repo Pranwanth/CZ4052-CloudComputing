@@ -34,10 +34,10 @@ const Home = () => {
       <div className="container mx-auto p-4">
       <NutritionSummary {...nutritionData} />
       
-      <div className="bg-white bg-opacity-90 p-8 rounded-lg shadow-md">
+      {/* <div className="bg-white bg-opacity-90 p-8 rounded-lg shadow-md">
         <h1 className="text-3xl font-bold mb-8">Upload Your Meal Image</h1>
         <ImageUpload onImageUpload={handleImageUpload} />
-      </div>
+      </div> */}
     </div></div>
   );
 };
