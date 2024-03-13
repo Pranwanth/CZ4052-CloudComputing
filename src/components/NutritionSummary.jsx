@@ -12,7 +12,8 @@ import {
   updateDoc,
   arrayUnion,
   getDoc,
-  setDoc
+  setDoc,
+  collection,
 } from "firebase/firestore";
 import app from "/Users/shannenlee/Documents/GitHub/CZ4052-CloudComputing/src/firebaseApp.js";
 import axios from "axios";
@@ -35,7 +36,7 @@ const NutritionSummary = () => {
 
   const processImage = async (file) => {
     // Assuming you have an API key stored securely on your server or using environment variables
-    const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY; 
+    const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 
     // Function to encode the image
     const toBase64 = (file) =>
@@ -111,11 +112,7 @@ const NutritionSummary = () => {
 
   // Function to toggle the display of the meal's image
   const toggleMealImageDisplay = (mealId) => {
-    if (expandedMealId === mealId) {
-      setExpandedMealId(null); // Collapse the currently expanded image
-    } else {
-      setExpandedMealId(mealId); // Expand the clicked image
-    }
+    setExpandedMealId((prevId) => (prevId === mealId ? null : mealId));
   };
 
   const addMealWithImage = async () => {
@@ -123,8 +120,28 @@ const NutritionSummary = () => {
 
     try {
       const { calories, fats, proteins } = await processImage(mealImage);
-
       const dateString = selectedDate.toISOString().split("T")[0];
+      const mealsCollectionRef = collection(
+        db,
+        "users",
+        user.uid,
+        "nutritionSummaries",
+        dateString,
+        "meals"
+      );
+      const newMealId = doc(mealsCollectionRef).id; // Generate unique ID for the new meal
+
+      const newMeal = {
+        id: newMealId, // Use the generated unique ID
+        description: mealDescription,
+        calories,
+        fats,
+        proteins,
+        timestamp: new Date(),
+        image: imagePreviewUrl,
+      };
+
+      // Assuming you want to keep the structure of having all meals in a single document under a "meals" field
       const docRef = doc(
         db,
         "users",
@@ -133,45 +150,29 @@ const NutritionSummary = () => {
         dateString
       );
 
-      const newMeal = {
-        description: mealDescription,
-        calories, // Use the values directly
-        fats,
-        proteins,
-        timestamp: new Date(),
-        image: imagePreviewUrl,
-      };
+      // Check if the document exists
+      const docSnap = await getDoc(docRef);
 
+      if (docSnap.exists()) {
+        // If the document exists, update it with the new meal
+        await updateDoc(docRef, {
+          meals: arrayUnion(newMeal),
+          // Include other fields as necessary
+        });
+      } else {
+        // If the document does not exist, create it with the new meal
+        await setDoc(docRef, {
+          meals: [newMeal], // Initialize with the newMeal inside an array
+          // Include other fields as necessary
+        });
+      }
 
-    // Check if the document exists
-    const docSnap = await getDoc(docRef);
-
-    if (docSnap.exists()) {
-      // If the document exists, update it with the new meal
-      await updateDoc(docRef, {
-        meals: arrayUnion(newMeal),
-        recommendedCalories: Number(dateNutrients.recommendedCalories),
-        recommendedFats: Number(dateNutrients.recommendedFats),
-        recommendedProteins: Number(dateNutrients.recommendedProteins),
-      });
-    } else {
-      // If the document does not exist, create it with the new meal
-      await setDoc(docRef, {
-        meals: [newMeal], // Initialize with the newMeal inside an array
-        recommendedCalories: Number(dateNutrients.recommendedCalories),
-        recommendedFats: Number(dateNutrients.recommendedFats),
-        recommendedProteins: Number(dateNutrients.recommendedProteins),
-      });
-    }
-
-    // Clear the input fields and image preview
-    setMealDescription("");
-    removeImage(); 
-    setIsAddMealModalOpen(false);
-
-
+      // Clear the input fields and image preview
+      setMealDescription("");
+      removeImage();
+      setIsAddMealModalOpen(false);
     } catch (error) {
-      console.error("Error processing image:", error);
+      console.error("Error adding new meal:", error);
     }
 
     setIsProcessing(false);
@@ -185,15 +186,18 @@ const NutritionSummary = () => {
     recommendedFats: 70, // Set your default recommended daily fats intake
     recommendedProteins: 60, // Set your default recommended daily proteins intake
   });
-  const totalCalories = dateNutrients.meals && Array.isArray(dateNutrients.meals)
-  ? dateNutrients.meals.reduce((acc, meal) => acc + meal.calories, 0)
-  : 0;
-  const totalFats = dateNutrients.meals && Array.isArray(dateNutrients.meals)
-  ? dateNutrients.meals.reduce((acc, meal) => acc + meal.fats, 0)
-  : 0;
-  const totalProteins = dateNutrients.meals && Array.isArray(dateNutrients.meals)
-  ? dateNutrients.meals.reduce((acc, meal) => acc + meal.proteins, 0)
-  : 0;
+  const totalCalories =
+    dateNutrients.meals && Array.isArray(dateNutrients.meals)
+      ? dateNutrients.meals.reduce((acc, meal) => acc + meal.calories, 0)
+      : 0;
+  const totalFats =
+    dateNutrients.meals && Array.isArray(dateNutrients.meals)
+      ? dateNutrients.meals.reduce((acc, meal) => acc + meal.fats, 0)
+      : 0;
+  const totalProteins =
+    dateNutrients.meals && Array.isArray(dateNutrients.meals)
+      ? dateNutrients.meals.reduce((acc, meal) => acc + meal.proteins, 0)
+      : 0;
 
   const [mealDescription, setMealDescription] = useState("");
 
@@ -256,17 +260,17 @@ const NutritionSummary = () => {
     // Create a reference to the Firestore document
     const dateString = selectedDate.toISOString().split("T")[0];
     const docRef = doc(db, "users", user.uid, "nutritionSummaries", dateString);
-  
+
     // New values for daily intakes
     const updatedValues = {
       recommendedCalories: newRecommendedCalories,
       recommendedFats: newRecommendedFats,
       recommendedProteins: newRecommendedProteins,
     };
-  
+
     // Check if the document exists
     const docSnap = await getDoc(docRef);
-  
+
     if (docSnap.exists()) {
       // If the document exists, update it with the new values
       await updateDoc(docRef, updatedValues);
@@ -274,26 +278,28 @@ const NutritionSummary = () => {
       // If the document does not exist, create it with the new values
       await setDoc(docRef, updatedValues);
     }
-  
+
     // Update local state
-    setDateNutrients(prevState => ({
+    setDateNutrients((prevState) => ({
       ...prevState,
       ...updatedValues,
     }));
-  
+
     // Close the modal
     setEditModalOpen(false);
   };
-  
+
   useEffect(() => {
     if (!user || !user.uid) {
-      console.log("User is not logged in or UID is missing. Skipping Firestore access.");
+      console.log(
+        "User is not logged in or UID is missing. Skipping Firestore access."
+      );
       return;
     }
-  
+
     const dateString = selectedDate.toISOString().split("T")[0];
     const docRef = doc(db, "users", user.uid, "nutritionSummaries", dateString);
-  
+
     const unsubscribe = onSnapshot(docRef, (docSnapshot) => {
       if (docSnapshot.exists()) {
         const data = docSnapshot.data();
@@ -302,22 +308,102 @@ const NutritionSummary = () => {
         // Document does not exist, so you might want to handle that scenario as well.
       }
     });
-  
+
     return () => unsubscribe();
   }, [selectedDate, user]);
-  
+
   const toggleAddMealModal = () => {
     setIsAddMealModalOpen(!isAddMealModalOpen);
   };
 
+  const handleRemoveMeal = async (mealId) => {
+    // Reference to the document
+    const dateString = selectedDate.toISOString().split("T")[0];
+    const docRef = doc(db, "users", user.uid, "nutritionSummaries", dateString);
+
+    // Fetch current meals
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const currentMeals = docSnap.data().meals;
+      const updatedMeals = currentMeals.filter((meal) => meal.id !== mealId);
+
+      // Update Firestore
+      await updateDoc(docRef, {
+        meals: updatedMeals,
+      });
+
+      // Update local state
+      setDateNutrients((prevState) => ({
+        ...prevState,
+        meals: updatedMeals,
+      }));
+    }
+  };
+
+  const [isEditMealModalOpen, setIsEditMealModalOpen] = useState(false);
+  const [currentMealBeingEdited, setCurrentMealBeingEdited] = useState(null);
+
+  const handleEditMeal = (mealId) => {
+    // Find the meal by id
+    const mealToEdit = dateNutrients.meals.find((meal) => meal.id === mealId);
+    setCurrentMealBeingEdited(mealToEdit);
+    setIsEditMealModalOpen(true);
+  };
+
+  const handleSubmitEditMeal = async (e) => {
+    e.preventDefault();
+    const dateString = selectedDate.toISOString().split("T")[0];
+    const docRef = doc(db, "users", user.uid, "nutritionSummaries", dateString);
+
+    // Fetch the current meals array from Firestore
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const currentMeals = docSnap.data().meals;
+      // Find the meal with the matching ID and update it
+      const updatedMeals = currentMeals.map((meal) => {
+        if (meal.id === currentMealBeingEdited.id) {
+          return currentMealBeingEdited; // Updated meal
+        }
+        return meal; // Unchanged meal
+      });
+
+      // Update Firestore with the new meals array
+      await updateDoc(docRef, {
+        meals: updatedMeals,
+      });
+
+      // Update local state to reflect the changes
+      setDateNutrients((prevState) => ({
+        ...prevState,
+        meals: updatedMeals,
+      }));
+    } else {
+      console.error("Document does not exist");
+    }
+
+    setIsEditMealModalOpen(false); // Close the edit modal
+  };
+
+  const handleImageChange = (e) => {
+    if (e.target.files.length > 0) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCurrentMealBeingEdited((prev) => ({
+          ...prev,
+          image: reader.result,
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
-
-    <div className='bg-green-50 p-4 rounded-lg shadow space-y-6'>
-
-{/* DATE */}
+    <div className='bg-green-50 p-4 rounded-lg shadow'>
+      {/* DATE */}
 
       <div className='flex justify-between items-center'>
-        <div className='relative'>
+        <div className='relative mt-2'>
           <DatePicker
             selected={selectedDate}
             onChange={handleDateChange}
@@ -332,7 +418,7 @@ const NutritionSummary = () => {
       </div>
       <br></br>
 
-{/* PROGRESS BARS */}
+      {/* PROGRESS BARS */}
 
       <div className='relative bg-white p-4 rounded-lg shadow'>
         <button
@@ -388,158 +474,267 @@ const NutritionSummary = () => {
         </div>
       </div>
 
-{/* EDIT PROGRESS BAR MODAL */}
+      {/* EDIT PROGRESS BAR MODAL */}
 
       {isEditModalOpen && (
         <div
           className='fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full'
           id='my-modal'
         >
-          <div className='relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-green-50'>
+          <div className='relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white'>
+            <span
+              className='close absolute top-0 right-0 text-2xl font-bold p-2 cursor-pointer'
+              onClick={() => setEditModalOpen(false)}
+            >
+              &times;
+            </span>
             <div className='mt-3 '>
               <h3 className='text-lg text-center leading-6 font-medium text-gray-900'>
-                Edit Daily Intakes:
+                Edit Daily Intakes
               </h3>
               <div className='mt-2 px-7 py-3'>
-                <label className='block text-sm font-medium text-gray-700'>
+                <label className='mt-6 block text-sm font-medium text-gray-700'>
                   Calories:
                 </label>
                 <input
                   type='number'
-                  className='mt-1 block w-full border-gray-300 rounded-md shadow mb-4'
+                  className='mt-2 text-md font-semibold cursor-pointer appearance-none bg-white pr-10 pl-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:border-green-500 w-full'
                   value={newRecommendedCalories}
                   onChange={(e) => setNewRecommendedCalories(e.target.value)}
                 />
-                <label className='block text-sm font-medium text-gray-700'>
+                <label className='mt-6 block text-sm font-medium text-gray-700'>
                   Fats (g):
                 </label>
                 <input
                   type='number'
-                  className='mt-1 block w-full border-gray-300 rounded-md shadow mb-4'
+                  className='mt-2 text-md font-semibold cursor-pointer appearance-none bg-white pr-10 pl-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:border-green-500 w-full'
                   value={newRecommendedFats}
                   onChange={(e) => setNewRecommendedFats(e.target.value)}
                 />
-                <label className='block text-sm font-medium text-gray-700'>
+                <label className=' mt-6 block text-sm font-medium text-gray-700'>
                   Proteins (g):
                 </label>
                 <input
                   type='number'
-                  className='mt-1 block w-full border-gray-300 rounded-md shadow mb-4'
+                  className='mt-2 text-md font-semibold cursor-pointer appearance-none bg-white pr-10 pl-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:border-green-500 w-full'
                   value={newRecommendedProteins}
                   onChange={(e) => setNewRecommendedProteins(e.target.value)}
                 />
               </div>
-              <div className='items-center px-4 py-3'>
+              <div className='mt-8 flex justify-end space-x-2'>
                 <button
                   id='ok-btn'
-                  className='px-4 py-2 bg-green-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300'
+                  className='bg-green-600 text-white px-4 py-2 border border-transparent rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500'
                   onClick={handleSaveNewIntakes}
                 >
-                  Save
-                </button>
-              </div>
-              <div className='items-center px-4 py-3'>
-                <button
-                  id='cancel-btn'
-                  className='px-4 py-2 bg-white text-base font-medium rounded-md w-full shadow focus:outline-none focus:ring-2'
-                  onClick={() => setEditModalOpen(false)}
-                >
-                  Cancel
+                  Save Changes
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
- 
-{/* TABLE */}
+
+      {/* TABLE */}
 
       <br></br>
       <div className='mt-4 overflow-x-auto'>
-        <table className='min-w-full bg-white'>
-
-{/* TABLE HEADER */}
+        <table
+          className='min-w-full rounded-lg'
+          style={{ backgroundColor: "#d0e7ca" }}
+        >
+          {/* TABLE HEADER */}
 
           <thead>
-            <tr className='w-full h-16 border-gray-300 border-b py-8'>
-              <th className='text-left pl-2 pr-8 text-xs font-medium text-gray-500 uppercase tracking-wider'>
+            <tr
+              className='w-full h-16 border-b py-8'
+              style={{ borderColor: "rgba(106, 165, 129, 1)" }}
+            >
+              <th className='text-left pl-4 pr-10 text-xs font-medium text-gray-500 uppercase '>
                 Meal
               </th>
-              <th className='text-left pl-2 pr-2 text-xs font-medium text-gray-500 uppercase tracking-wider'>
+              <th className='text-left pl-2 pr-2 text-xs font-medium text-gray-500 uppercase'>
                 Calories
               </th>
-              <th className='text-left pl-2 pr-2 text-xs font-medium text-gray-500 uppercase tracking-wider'>
+              <th className='text-left pl-2 pr-2 text-xs font-medium text-gray-500 uppercase '>
                 Fats (g)
               </th>
-              <th className='text-left pl-2 pr-2 text-xs font-medium text-gray-500 uppercase tracking-wider'>
+              <th className='text-left pl-2 pr-2 text-xs font-medium text-gray-500 uppercase '>
                 Proteins (g)
               </th>
             </tr>
           </thead>
 
-
-{/* TABLE BODY */} 
+          {/* TABLE BODY */}
 
           <tbody className='text-sm font-normal text-gray-700'>
             {Array.isArray(dateNutrients.meals) &&
               dateNutrients.meals.map((meal, index) => {
-                let mealDate =
-                  meal.timestamp instanceof Date
-                    ? meal.timestamp
-                    : new Date(meal.timestamp);
                 return (
                   <>
                     <tr
                       key={meal.id}
-                      onClick={() => toggleMealImageDisplay(meal.id)}
-                      className='hover:bg-gray-100 border-b border-gray-200 py-10 cursor-pointer'
+                      className='hover:bg-gray-300 border-b py-10 cursor-pointer'
+                      style={{ borderColor: "rgba(106, 165, 129, 0.3)" }}
                     >
-                      <td className='pl-2 pr-2'>{meal.description}</td>
+                      <td className='pl-4 pr-2'>{meal.description}</td>
                       <td className='pl-2 pr-2'>{meal.calories}</td>
                       <td className='pl-2 pr-2'>{meal.fats}</td>
                       <td className='pl-2 pr-2'>{meal.proteins}</td>
+                      <td>
+                        <button onClick={() => toggleMealImageDisplay(meal.id)}>
+                          <ChevronDownIcon className='h-5 w-5 text-gray-400 sm:h-6 sm:w-6' />
+                        </button>
+                      </td>
                     </tr>
-                    {expandedMealId === meal.id && meal.image && (
+                    {expandedMealId === meal.id && (
                       <tr>
-                        <td colSpan='4'>
+                        <td colSpan='5' className='relative'>
                           <img
                             src={meal.image}
                             alt={`Meal ${meal.description}`}
-                            className='w-full h-auto'
+                            className='w-20 h-20 object-cover rounded-lg mt-6 ml-2 mb-6' // Adjust border-radius here
                           />
+                          <div className='absolute right-0 top-0 flex items-center'>
+                            {" "}
+                            {/* Container for icons */}
+                            <button
+                              onClick={() => handleEditMeal(meal.id)}
+                              className='p-1 mt-2'
+                            >
+                              <img
+                                src='src/assets/editicon.png' // Replace with your actual path to the edit icon
+                                alt='Edit'
+                                className='h-6 w-6' // Adjust size as needed
+                              />
+                            </button>
+                            <button
+                              onClick={() => handleRemoveMeal(meal.id)}
+                              className='p-1 ml-2 mr-3 mt-2' // Add margin left to separate the icons
+                            >
+                              <img
+                                src='src/assets/deleteicon.png' // Replace with your actual path to the delete icon
+                                alt='Delete'
+                                className='h-6 w-6' // Adjust size as needed
+                              />
+                            </button>
+                          </div>
                         </td>
                       </tr>
+                    )}
+                    {isEditMealModalOpen && (
+                      <div
+                        className='fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full'
+                        id='edit-meal-modal'
+                      >
+                        <div className='relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white'>
+                          <div className='modal-content'>
+                            <span
+                              className='close absolute top-0 right-0 text-2xl font-bold p-2 cursor-pointer'
+                              onClick={() => setIsEditMealModalOpen(false)}
+                            >
+                              &times;
+                            </span>
+                            <h3 className='text-lg text-center leading-6 font-medium text-gray-900 mb-4'>
+                              Edit Meal
+                            </h3>
+                            <form
+                              onSubmit={handleSubmitEditMeal}
+                              className='space-y-4'
+                            >
+                              <div>
+                                <label
+                                  htmlFor='meal-description'
+                                  className='mt-10 mb-2 block text-sm font-medium text-gray-700'
+                                >
+                                  Meal Description:
+                                </label>
+                                <input
+                                  type='text'
+                                  id='meal-description'
+                                  className='mt-1 mb-8 text-md font-semibold cursor-pointer appearance-none bg-white pr-10 pl-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:border-green-500 w-full'
+                                  value={
+                                    currentMealBeingEdited?.description || ""
+                                  }
+                                  onChange={(e) =>
+                                    setCurrentMealBeingEdited((prev) => ({
+                                      ...prev,
+                                      description: e.target.value,
+                                    }))
+                                  }
+                                />
+                              </div>
+                              <div className='flex justify-center items-center flex-col'>
+                                {currentMealBeingEdited?.image && (
+                                  <img
+                                    src={currentMealBeingEdited.image}
+                                    alt='Meal'
+                                    className='mb-4 max-h-40 rounded-lg '
+                                  />
+                                )}
+                                <button
+                                  type='button'
+                                  className='bg-blue-500 mt-3 mb-10 text-white px-4 py-2 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                                  onClick={() =>
+                                    document
+                                      .getElementById("image-upload")
+                                      .click()
+                                  }
+                                >
+                                  Replace Image
+                                </button>
+                                <input
+                                  type='file'
+                                  id='image-upload'
+                                  className='hidden'
+                                  onChange={handleImageChange}
+                                />
+                              </div>
+                              <div className='flex justify-end space-x-2'>
+                                <button
+                                  type='submit'
+                                  className='bg-green-600 text-white px-4 py-2 border border-transparent rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500'
+                                >
+                                  Save Changes
+                                </button>
+                              </div>
+                            </form>
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </>
                 );
               })}
           </tbody>
 
-{/* TABLE FOOTER - TOTAL MACROS */}
+          {/* TABLE FOOTER - TOTAL MACROS */}
 
-          <tfoot className='text-sm font-normal text-gray-700'>
+          <tfoot className='text-sm font-normal text-gray-700 mb-10'>
+            <br></br>
             <tr>
-              <td className='pl-2 pr-2 pt-2 font-bold'>Total</td>
+              <td className='pl-4 pr-2 pt-2 font-bold'>Total</td>
               <td className='pl-2 pr-2 pt-2 font-bold'>{totalCalories}</td>
               <td className='pl-2 pr-2 pt-2 font-bold'>{totalFats}</td>
               <td className='pl-2 pr-2 pt-2 font-bold'>{totalProteins}</td>
             </tr>
+            <br></br>
           </tfoot>
         </table>
       </div>
 
-{/* ADD MEAL BUTTON */}
+      {/* ADD MEAL BUTTON */}
 
-      <div className='flex justify-center mt-4'>
-      <button
-        onClick={toggleAddMealModal}
-        className='bg-white text-lg px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:border-green-700 text-black'
-      >
-        Add Meal +
-      </button>
+      <div className='flex justify-center mt-8'>
+        <button
+          onClick={toggleAddMealModal}
+          className='bg-white text-lg px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:border-green-700 text-black'
+        >
+          + Add Meal
+        </button>
       </div>
 
-{/* ADD MEAL MODAL */}
+      {/* ADD MEAL MODAL */}
 
       {isAddMealModalOpen && (
         <div
@@ -555,10 +750,15 @@ const NutritionSummary = () => {
               >
                 &times;
               </span>
-              <div className='mb-12'>
+
+              <h3 className='text-lg text-center leading-6 font-medium text-gray-900 mb-4'>
+                Add Meal
+              </h3>
+
+              <div className='mb-12 mt-10'>
                 <label
                   htmlFor='meal-description'
-                  className='block text-lg font-medium text-gray-700'
+                  className='mb-2 block text-sm font-medium text-gray-700'
                 >
                   Meal Description:
                 </label>
@@ -592,11 +792,13 @@ const NutritionSummary = () => {
               )}
               {!imagePreviewUrl && (
                 <ImageUpload onImageUpload={onImageUpload} />
-              )}<br></br><br></br>
-              <div className='flex justify-center mt-4'>
+              )}
+              <br></br>
+              <br></br>
+              <div className='mt-8 flex justify-end space-x-2'>
                 <button
                   disabled={isProcessing}
-                  className={`text-lg bg-green-50 px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:border-green-500  text-center ${
+                  className={`bg-green-600 text-white px-4 py-2 border border-transparent rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${
                     isProcessing ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                   onClick={addMealWithImage}
