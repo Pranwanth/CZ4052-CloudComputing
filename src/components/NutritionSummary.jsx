@@ -11,6 +11,8 @@ import {
   onSnapshot,
   updateDoc,
   arrayUnion,
+  getDoc,
+  setDoc
 } from "firebase/firestore";
 import app from "/Users/shannenlee/Documents/GitHub/CZ4052-CloudComputing/src/firebaseApp.js";
 import axios from "axios";
@@ -33,7 +35,7 @@ const NutritionSummary = () => {
 
   const processImage = async (file) => {
     // Assuming you have an API key stored securely on your server or using environment variables
-    const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY; // This should be set in your .env file
+    const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY; 
 
     // Function to encode the image
     const toBase64 = (file) =>
@@ -140,15 +142,34 @@ const NutritionSummary = () => {
         image: imagePreviewUrl,
       };
 
-      // Update Firestore document with the new meal
+
+    // Check if the document exists
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      // If the document exists, update it with the new meal
       await updateDoc(docRef, {
         meals: arrayUnion(newMeal),
         recommendedCalories: Number(dateNutrients.recommendedCalories),
         recommendedFats: Number(dateNutrients.recommendedFats),
         recommendedProteins: Number(dateNutrients.recommendedProteins),
       });
+    } else {
+      // If the document does not exist, create it with the new meal
+      await setDoc(docRef, {
+        meals: [newMeal], // Initialize with the newMeal inside an array
+        recommendedCalories: Number(dateNutrients.recommendedCalories),
+        recommendedFats: Number(dateNutrients.recommendedFats),
+        recommendedProteins: Number(dateNutrients.recommendedProteins),
+      });
+    }
 
-      removeImage();
+    // Clear the input fields and image preview
+    setMealDescription("");
+    removeImage(); 
+    setIsAddMealModalOpen(false);
+
+
     } catch (error) {
       console.error("Error processing image:", error);
     }
@@ -231,22 +252,70 @@ const NutritionSummary = () => {
     dateNutrients.recommendedProteins
   );
 
-  const handleSaveNewIntakes = () => {
-    setDateNutrients({
-      ...dateNutrients,
+  const handleSaveNewIntakes = async () => {
+    // Create a reference to the Firestore document
+    const dateString = selectedDate.toISOString().split("T")[0];
+    const docRef = doc(db, "users", user.uid, "nutritionSummaries", dateString);
+  
+    // New values for daily intakes
+    const updatedValues = {
       recommendedCalories: newRecommendedCalories,
       recommendedFats: newRecommendedFats,
       recommendedProteins: newRecommendedProteins,
-    });
+    };
+  
+    // Check if the document exists
+    const docSnap = await getDoc(docRef);
+  
+    if (docSnap.exists()) {
+      // If the document exists, update it with the new values
+      await updateDoc(docRef, updatedValues);
+    } else {
+      // If the document does not exist, create it with the new values
+      await setDoc(docRef, updatedValues);
+    }
+  
+    // Update local state
+    setDateNutrients(prevState => ({
+      ...prevState,
+      ...updatedValues,
+    }));
+  
+    // Close the modal
     setEditModalOpen(false);
   };
-
+  
+  useEffect(() => {
+    if (!user || !user.uid) {
+      console.log("User is not logged in or UID is missing. Skipping Firestore access.");
+      return;
+    }
+  
+    const dateString = selectedDate.toISOString().split("T")[0];
+    const docRef = doc(db, "users", user.uid, "nutritionSummaries", dateString);
+  
+    const unsubscribe = onSnapshot(docRef, (docSnapshot) => {
+      if (docSnapshot.exists()) {
+        const data = docSnapshot.data();
+        setDateNutrients(data);
+      } else {
+        // Document does not exist, so you might want to handle that scenario as well.
+      }
+    });
+  
+    return () => unsubscribe();
+  }, [selectedDate, user]);
+  
   const toggleAddMealModal = () => {
     setIsAddMealModalOpen(!isAddMealModalOpen);
   };
 
   return (
+
     <div className='bg-green-50 p-4 rounded-lg shadow space-y-6'>
+
+{/* DATE */}
+
       <div className='flex justify-between items-center'>
         <div className='relative'>
           <DatePicker
@@ -262,6 +331,8 @@ const NutritionSummary = () => {
         </div>
       </div>
       <br></br>
+
+{/* PROGRESS BARS */}
 
       <div className='relative bg-white p-4 rounded-lg shadow'>
         <button
@@ -316,6 +387,9 @@ const NutritionSummary = () => {
           ></div>
         </div>
       </div>
+
+{/* EDIT PROGRESS BAR MODAL */}
+
       {isEditModalOpen && (
         <div
           className='fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full'
@@ -377,54 +451,15 @@ const NutritionSummary = () => {
           </div>
         </div>
       )}
-      {/* 
-      <div> <br></br>
-      <div className="mb-4"><label >Meal Description: </label></div>
-        
-        <input
-          type='text'
-          className='text-md font-semibold cursor-pointer appearance-none bg-white pr-10 pl-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:border-green-500 w-full max-w-xs'
-          value={mealDescription}
-          onChange={(e) => setMealDescription(e.target.value)}
-        />{" "}
-      </div>
-      <br></br>
-      <br></br>
-      {imagePreviewUrl && (
-  <div className='relative inline-block'>
-    <img
-      src={imagePreviewUrl}
-      alt='Meal preview'
-      className='h-40 w-40 object-cover'
-    />
-    <button
-      onClick={removeImage}
-      className='absolute top-0 right-0 flex items-center justify-center bg-red-500 text-white rounded-full'
-      style={{ transform: 'translate(50%, -50%)', width: '30px', height: '30px' }} // This will create a circle with a diameter of 30px
-    >
-      X
-    </button>
-  </div>
-)}
-{!imagePreviewUrl && <ImageUpload onImageUpload={onImageUpload} />}
-
-
-
-      <br></br>
-      <div className="flex justify-center items-center">
-      <button
-        disabled={isProcessing}
-        className={`text-lg bg-green-100 px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:border-green-500  text-center ${
-          isProcessing ? "opacity-50 cursor-not-allowed" : ""
-        }`}
-        onClick={addMealWithImage}
-      >
-        {isProcessing ? "Processing..." : "Add Meal"}
-      </button></div> */}
+ 
+{/* TABLE */}
 
       <br></br>
       <div className='mt-4 overflow-x-auto'>
         <table className='min-w-full bg-white'>
+
+{/* TABLE HEADER */}
+
           <thead>
             <tr className='w-full h-16 border-gray-300 border-b py-8'>
               <th className='text-left pl-2 pr-8 text-xs font-medium text-gray-500 uppercase tracking-wider'>
@@ -441,6 +476,10 @@ const NutritionSummary = () => {
               </th>
             </tr>
           </thead>
+
+
+{/* TABLE BODY */} 
+
           <tbody className='text-sm font-normal text-gray-700'>
             {Array.isArray(dateNutrients.meals) &&
               dateNutrients.meals.map((meal, index) => {
@@ -476,6 +515,8 @@ const NutritionSummary = () => {
               })}
           </tbody>
 
+{/* TABLE FOOTER - TOTAL MACROS */}
+
           <tfoot className='text-sm font-normal text-gray-700'>
             <tr>
               <td className='pl-2 pr-2 pt-2 font-bold'>Total</td>
@@ -486,6 +527,9 @@ const NutritionSummary = () => {
           </tfoot>
         </table>
       </div>
+
+{/* ADD MEAL BUTTON */}
+
       <div className='flex justify-center mt-4'>
       <button
         onClick={toggleAddMealModal}
@@ -495,7 +539,8 @@ const NutritionSummary = () => {
       </button>
       </div>
 
-      {/* Existing JSX elements */}
+{/* ADD MEAL MODAL */}
+
       {isAddMealModalOpen && (
         <div
           className='fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full'
