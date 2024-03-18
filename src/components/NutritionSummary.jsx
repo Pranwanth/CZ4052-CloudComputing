@@ -34,6 +34,67 @@ const NutritionSummary = () => {
     reader.readAsDataURL(file);
   };
 
+  const fetchMealExplanation = async (file) => {
+    // Assuming you have an API key stored securely on your server or using environment variables
+    const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+
+    // Function to encode the image
+    const toBase64 = (file) =>
+      new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = (error) => reject(error);
+      });
+
+    try {
+      const base64Image = await toBase64(file);
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      };
+
+      const payload = {
+        model: "gpt-4-vision-preview",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Please provide a simple description of the food in the picture, and how it is healthy/unhealthy. Respond with only 100 words or less.",
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: base64Image,
+                },
+              },
+            ],
+          },
+        ],
+        max_tokens: 300,
+      };
+
+      const response = await axios.post(
+        "https://api.openai.com/v1/chat/completions",
+        payload,
+        { headers }
+      );
+
+      if (response.data) {
+        const explainString = response.data.choices[0].message.content;
+        console.log(explainString);
+
+        return explainString; // Returns the parsed object
+      }
+    } catch (error) {
+      console.error("Error calling OpenAI Vision API:", error);
+      // Handle the error
+      // Possibly return an indication that the request failed
+    }
+  };
+
   const processImage = async (file) => {
     // Assuming you have an API key stored securely on your server or using environment variables
     const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
@@ -120,6 +181,7 @@ const NutritionSummary = () => {
 
     try {
       const { calories, fats, proteins } = await processImage(mealImage);
+      const explanation = await fetchMealExplanation(mealImage);
       const dateString = selectedDate.toISOString().split("T")[0];
       const mealsCollectionRef = collection(
         db,
@@ -137,6 +199,7 @@ const NutritionSummary = () => {
         calories,
         fats,
         proteins,
+        explanation,
         timestamp: new Date(),
         image: imagePreviewUrl,
       };
@@ -595,6 +658,7 @@ const NutritionSummary = () => {
                             alt={`Meal ${meal.description}`}
                             className='w-20 h-20 object-cover rounded-lg mt-6 ml-2 mb-6' // Adjust border-radius here
                           />
+                          <p>{meal.explanation}</p>
                           <div className='absolute right-0 top-0 flex items-center'>
                             {" "}
                             {/* Container for icons */}
