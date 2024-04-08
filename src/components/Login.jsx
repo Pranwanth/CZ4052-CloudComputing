@@ -44,10 +44,10 @@ const Login = () => {
               Email address
             </label>
             <input
+              autocomplete="off"
               id="email"
               name="email"
               type="email"
-              autoComplete="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -62,7 +62,7 @@ const Login = () => {
               id="password"
               name="password"
               type="password"
-              autoComplete="current-password"
+              autocomplete="off"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}

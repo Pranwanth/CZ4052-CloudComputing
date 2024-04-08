@@ -123,7 +123,7 @@ const NutritionSummary = () => {
             content: [
               {
                 type: "text",
-                text: "Please provide an estimated nutritional breakdown of the meal shown in the image. Respond with a simple JSON object with estimated values for 'calories', 'fats', and 'proteins' in grams. Avoid explanatory text, just provide the values in JSON format.",
+                text: "Please provide an estimated nutritional breakdown of the meal shown in the image. Respond with a simple JSON object with estimated values for 'calories', 'carbs', 'fats', and 'proteins' in grams. Avoid explanatory text, just provide the values in JSON format.",
               },
               {
                 type: "image_url",
@@ -180,7 +180,7 @@ const NutritionSummary = () => {
     setIsProcessing(true);
 
     try {
-      const { calories, fats, proteins } = await processImage(mealImage);
+      const { calories, carbs, fats, proteins } = await processImage(mealImage);
       const explanation = await fetchMealExplanation(mealImage);
       const dateString = selectedDate.toISOString().split("T")[0];
       const mealsCollectionRef = collection(
@@ -197,6 +197,7 @@ const NutritionSummary = () => {
         id: newMealId, // Use the generated unique ID
         description: mealDescription,
         calories,
+        carbs,
         fats,
         proteins,
         explanation,
@@ -246,12 +247,17 @@ const NutritionSummary = () => {
   const [dateNutrients, setDateNutrients] = useState({
     meals: [],
     recommendedCalories: 2000,
+    recommendedCarbs: 300,
     recommendedFats: 70, // Set your default recommended daily fats intake
     recommendedProteins: 60, // Set your default recommended daily proteins intake
   });
   const totalCalories =
     dateNutrients.meals && Array.isArray(dateNutrients.meals)
       ? dateNutrients.meals.reduce((acc, meal) => acc + meal.calories, 0)
+      : 0;
+  const totalCarbs =
+    dateNutrients.meals && Array.isArray(dateNutrients.meals)
+      ? dateNutrients.meals.reduce((acc, meal) => acc + meal.carbs, 0)
       : 0;
   const totalFats =
     dateNutrients.meals && Array.isArray(dateNutrients.meals)
@@ -282,6 +288,7 @@ const NutritionSummary = () => {
         setDateNutrients({
           meals: [],
           recommendedCalories: 2000,
+          recommendedCarbs: 300,
           recommendedFats: 70,
           recommendedProteins: 60,
         });
@@ -299,6 +306,10 @@ const NutritionSummary = () => {
     ? (totalCalories / dateNutrients.recommendedCalories) * 100
     : 0;
 
+  const carbsPercentage = dateNutrients.recommendedCarbs
+    ? (totalCalories / dateNutrients.recommendedCarbs) * 100
+    : 0;
+
   const fatsPercentage = dateNutrients.recommendedFats
     ? (totalFats / dateNutrients.recommendedFats) * 100
     : 0;
@@ -312,6 +323,11 @@ const NutritionSummary = () => {
   const [newRecommendedCalories, setNewRecommendedCalories] = useState(
     dateNutrients.recommendedCalories
   );
+
+  const [newRecommendedCarbs, setNewRecommendedCarbs] = useState(
+    dateNutrients.recommendedCarbs
+  );
+
   const [newRecommendedFats, setNewRecommendedFats] = useState(
     dateNutrients.recommendedFats
   );
@@ -327,6 +343,7 @@ const NutritionSummary = () => {
     // New values for daily intakes
     const updatedValues = {
       recommendedCalories: newRecommendedCalories,
+      recommendedCarbs: newRecommendedCarbs,
       recommendedFats: newRecommendedFats,
       recommendedProteins: newRecommendedProteins,
     };
@@ -508,6 +525,20 @@ const NutritionSummary = () => {
           ></div>
         </div>
 
+        <p className='text-sm  text-gray-700 mb-4'>Carbs 🍞</p>
+        <div className='text-3xl flex items-center space-x-1 mb-4'>
+          <p className='font-medium text-green-700'>{totalCarbs} </p>
+          <p className='font-medium text-gray-700'>
+            / {dateNutrients.recommendedCarbs} g
+          </p>
+        </div>
+        <div className='w-full bg-gray-200 rounded-full h-6 dark:bg-gray-700 mb-8'>
+          <div
+            className='bg-green-700 h-6 rounded-full'
+            style={{ width: `${Math.min(caloriePercentage, 100)}%` }}
+          ></div>
+        </div>
+
         <p className='text-sm  text-gray-700 mb-4'>Fats 🧀</p>
         <div className='text-3xl flex items-center space-x-1 mb-4'>
           <p className='font-medium text-yellow-500'>{totalFats} </p>
@@ -566,6 +597,15 @@ const NutritionSummary = () => {
                   onChange={(e) => setNewRecommendedCalories(e.target.value)}
                 />
                 <label className='mt-6 block text-sm font-medium text-gray-700'>
+                  Carbs:
+                </label>
+                <input
+                  type='number'
+                  className='mt-2 text-md font-semibold cursor-pointer appearance-none bg-white pr-10 pl-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:border-green-500 w-full'
+                  value={newRecommendedCarbs}
+                  onChange={(e) => setNewRecommendedCarbs(e.target.value)}
+                />
+                <label className='mt-6 block text-sm font-medium text-gray-700'>
                   Fats (g):
                 </label>
                 <input
@@ -620,10 +660,13 @@ const NutritionSummary = () => {
                 Calories
               </th>
               <th className='text-left pl-2 pr-2 text-xs font-medium text-gray-500 uppercase '>
-                Fats (g)
+                Carbs
               </th>
               <th className='text-left pl-2 pr-2 text-xs font-medium text-gray-500 uppercase '>
-                Proteins (g)
+                Fats
+              </th>
+              <th className='text-left pl-2 pr-2 text-xs font-medium text-gray-500 uppercase '>
+                Proteins
               </th>
             </tr>
           </thead>
@@ -642,6 +685,7 @@ const NutritionSummary = () => {
                     >
                       <td className='pl-4 pr-2'>{meal.description}</td>
                       <td className='pl-2 pr-2'>{meal.calories}</td>
+                      <td className='pl-2 pr-2'>{meal.carbs}</td>
                       <td className='pl-2 pr-2'>{meal.fats}</td>
                       <td className='pl-2 pr-2'>{meal.proteins}</td>
                       <td>
@@ -779,6 +823,7 @@ const NutritionSummary = () => {
             <tr>
               <td className='pl-4 pr-2 pt-2 font-bold'>Total</td>
               <td className='pl-2 pr-2 pt-2 font-bold'>{totalCalories}</td>
+              <td className='pl-2 pr-2 pt-2 font-bold'>{totalCarbs}</td>
               <td className='pl-2 pr-2 pt-2 font-bold'>{totalFats}</td>
               <td className='pl-2 pr-2 pt-2 font-bold'>{totalProteins}</td>
             </tr>
