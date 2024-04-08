@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import app from '/Users/shannenlee/Documents/GitHub/CZ4052-CloudComputing/src/firebaseApp.js'; // Adjust the path as necessary
+import app from '../firebaseApp';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 
-// Use the app with getAuth
 const auth = getAuth(app);
 
 const Register = () => {
@@ -21,9 +20,9 @@ const Register = () => {
     }
     try {
       await createUserWithEmailAndPassword(auth, email, password);
-      navigate('/login'); // Redirect to login page or wherever you'd like after registration
+      navigate('/login');
     } catch (error) {
-      setError(error.message); // Display any errors
+      setError(error.message);
     }
   };
 

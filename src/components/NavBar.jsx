@@ -1,13 +1,10 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useContext } from "react";
-import { UserCircleIcon } from "@heroicons/react/20/solid"; // Assuming you're using Heroicons
-import { AuthContext } from "../contexts/AuthContext"; // Update the import path as needed
-
+import { UserCircleIcon } from "@heroicons/react/20/solid"; import { AuthContext } from "../contexts/AuthContext";
 const NavBar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user, signOut } = useContext(AuthContext);
-  const navigate = useNavigate(); // Hook for navigation
-
+  const navigate = useNavigate();
   const toggleMenu = () => {
     setIsOpen(!isOpen);
   };
@@ -15,8 +12,7 @@ const NavBar = () => {
   const handleLogout = async () => {
     try {
       await signOut();
-      setIsOpen(false); // Close the mobile menu
-      navigate("/"); // Navigate to the Welcome page
+      setIsOpen(false); navigate("/");
     } catch (error) {
       console.error("Logout error:", error);
     }
@@ -79,7 +75,6 @@ const NavBar = () => {
         {isOpen && (
           <div className='absolute top-full right-0 bg-green border bg-green-50 border-green-600 shadow-md py-2 px-4 rounded-md z-10'>
             {user ? (
-              // Show logout for authenticated user
               <button
                 onClick={handleLogout}
                 className='block  text-green-700 hover:text-green-900 transition-colors duration-200'
@@ -87,7 +82,6 @@ const NavBar = () => {
                 Logout
               </button>
             ) : (
-              // Show login/register for unauthenticated user
               <>
                 <Link
                   to='/login'
@@ -110,7 +104,6 @@ const NavBar = () => {
         {/* Desktop links */}
         <div className='hidden lg:flex lg:items-center lg:space-x-6'>
           {user ? (
-            // Show logout for authenticated user
             <button
               onClick={handleLogout}
               className='flex items-center  text-green-700 hover:text-green-900 transition-colors duration-200'
@@ -118,7 +111,6 @@ const NavBar = () => {
               Logout
             </button>
           ) : (
-            // Show login/register for unauthenticated user
             <>
               <Link
                 to='/login'

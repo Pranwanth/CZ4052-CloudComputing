@@ -1,29 +1,30 @@
-import React, { useState, useEffect, useContext, useRef } from "react";
-import DatePicker from "react-datepicker";
-import "react-circular-progressbar/dist/styles.css";
-import "react-datepicker/dist/react-datepicker.css";
-import { ChevronDownIcon } from "@heroicons/react/20/solid"; // Assuming you're using Heroicons
-import ImageUpload from "/Users/shannenlee/Documents/GitHub/CZ4052-CloudComputing/src/components/ImageUpload.jsx"; // Adjust the import path as necessary
-import { AuthContext } from "/Users/shannenlee/Documents/GitHub/CZ4052-CloudComputing/src/contexts/AuthContext"; // Adjust the import path
-import {
-  getFirestore,
-  doc,
-  onSnapshot,
-  updateDoc,
-  arrayUnion,
-  getDoc,
-  setDoc,
-  collection,
-} from "firebase/firestore";
-import app from "/Users/shannenlee/Documents/GitHub/CZ4052-CloudComputing/src/firebaseApp.js";
+import { ChevronDownIcon } from "@heroicons/react/20/solid";
 import axios from "axios";
+import {
+  arrayUnion,
+  collection,
+  doc,
+  getDoc,
+  getFirestore,
+  onSnapshot,
+  setDoc,
+  updateDoc,
+} from "firebase/firestore";
+import React, { useContext, useEffect, useState } from "react";
+import "react-circular-progressbar/dist/styles.css";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+
+import ImageUpload from "../components/ImageUpload";
+import { AuthContext } from "../contexts/AuthContext";
+import app from "../firebaseApp";
 
 const db = getFirestore(app);
 
 const NutritionSummary = () => {
   const [mealImage, setMealImage] = useState(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState(""); // New state for storing the image preview URL
-  const [isProcessing, setIsProcessing] = useState(false); // New state to indicate processing status
+  const [imagePreviewUrl, setImagePreviewUrl] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const onImageUpload = (file) => {
     setMealImage(file);
@@ -35,10 +36,8 @@ const NutritionSummary = () => {
   };
 
   const fetchMealExplanation = async (file) => {
-    // Assuming you have an API key stored securely on your server or using environment variables
     const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 
-    // Function to encode the image
     const toBase64 = (file) =>
       new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -86,20 +85,16 @@ const NutritionSummary = () => {
         const explainString = response.data.choices[0].message.content;
         console.log(explainString);
 
-        return explainString; // Returns the parsed object
+        return explainString;
       }
     } catch (error) {
       console.error("Error calling OpenAI Vision API:", error);
-      // Handle the error
-      // Possibly return an indication that the request failed
     }
   };
 
   const processImage = async (file) => {
-    // Assuming you have an API key stored securely on your server or using environment variables
     const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 
-    // Function to encode the image
     const toBase64 = (file) =>
       new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -151,27 +146,21 @@ const NutritionSummary = () => {
         console.log(cleanString);
         const macronutrients = JSON.parse(cleanString);
 
-        console.log(macronutrients); // This will log the actual JavaScript object
-
-        return macronutrients; // Returns the parsed object
+        console.log(macronutrients);
+        return macronutrients;
       }
     } catch (error) {
       console.error("Error calling OpenAI Vision API:", error);
-      // Handle the error
-      // Possibly return an indication that the request failed
     }
   };
 
-  // New state to manage which meal's image is being displayed
   const [expandedMealId, setExpandedMealId] = useState(null);
 
-  // Function to remove the image
   const removeImage = () => {
     setMealImage(null);
     setImagePreviewUrl("");
   };
 
-  // Function to toggle the display of the meal's image
   const toggleMealImageDisplay = (mealId) => {
     setExpandedMealId((prevId) => (prevId === mealId ? null : mealId));
   };
@@ -191,11 +180,9 @@ const NutritionSummary = () => {
         dateString,
         "meals"
       );
-      const newMealId = doc(mealsCollectionRef).id; // Generate unique ID for the new meal
-
+      const newMealId = doc(mealsCollectionRef).id;
       const newMeal = {
-        id: newMealId, // Use the generated unique ID
-        description: mealDescription,
+        id: newMealId, description: mealDescription,
         calories,
         fats,
         proteins,
@@ -204,7 +191,6 @@ const NutritionSummary = () => {
         image: imagePreviewUrl,
       };
 
-      // Assuming you want to keep the structure of having all meals in a single document under a "meals" field
       const docRef = doc(
         db,
         "users",
@@ -213,24 +199,18 @@ const NutritionSummary = () => {
         dateString
       );
 
-      // Check if the document exists
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
-        // If the document exists, update it with the new meal
         await updateDoc(docRef, {
           meals: arrayUnion(newMeal),
-          // Include other fields as necessary
         });
       } else {
-        // If the document does not exist, create it with the new meal
         await setDoc(docRef, {
-          meals: [newMeal], // Initialize with the newMeal inside an array
-          // Include other fields as necessary
+          meals: [newMeal],
         });
       }
 
-      // Clear the input fields and image preview
       setMealDescription("");
       removeImage();
       setIsAddMealModalOpen(false);
@@ -246,8 +226,7 @@ const NutritionSummary = () => {
   const [dateNutrients, setDateNutrients] = useState({
     meals: [],
     recommendedCalories: 2000,
-    recommendedFats: 70, // Set your default recommended daily fats intake
-    recommendedProteins: 60, // Set your default recommended daily proteins intake
+    recommendedFats: 70, recommendedProteins: 60,
   });
   const totalCalories =
     dateNutrients.meals && Array.isArray(dateNutrients.meals)
@@ -320,35 +299,28 @@ const NutritionSummary = () => {
   );
 
   const handleSaveNewIntakes = async () => {
-    // Create a reference to the Firestore document
     const dateString = selectedDate.toISOString().split("T")[0];
     const docRef = doc(db, "users", user.uid, "nutritionSummaries", dateString);
 
-    // New values for daily intakes
     const updatedValues = {
       recommendedCalories: newRecommendedCalories,
       recommendedFats: newRecommendedFats,
       recommendedProteins: newRecommendedProteins,
     };
 
-    // Check if the document exists
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      // If the document exists, update it with the new values
       await updateDoc(docRef, updatedValues);
     } else {
-      // If the document does not exist, create it with the new values
       await setDoc(docRef, updatedValues);
     }
 
-    // Update local state
     setDateNutrients((prevState) => ({
       ...prevState,
       ...updatedValues,
     }));
 
-    // Close the modal
     setEditModalOpen(false);
   };
 
@@ -368,7 +340,6 @@ const NutritionSummary = () => {
         const data = docSnapshot.data();
         setDateNutrients(data);
       } else {
-        // Document does not exist, so you might want to handle that scenario as well.
       }
     });
 
@@ -380,22 +351,18 @@ const NutritionSummary = () => {
   };
 
   const handleRemoveMeal = async (mealId) => {
-    // Reference to the document
     const dateString = selectedDate.toISOString().split("T")[0];
     const docRef = doc(db, "users", user.uid, "nutritionSummaries", dateString);
 
-    // Fetch current meals
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       const currentMeals = docSnap.data().meals;
       const updatedMeals = currentMeals.filter((meal) => meal.id !== mealId);
 
-      // Update Firestore
       await updateDoc(docRef, {
         meals: updatedMeals,
       });
 
-      // Update local state
       setDateNutrients((prevState) => ({
         ...prevState,
         meals: updatedMeals,
@@ -407,7 +374,6 @@ const NutritionSummary = () => {
   const [currentMealBeingEdited, setCurrentMealBeingEdited] = useState(null);
 
   const handleEditMeal = (mealId) => {
-    // Find the meal by id
     const mealToEdit = dateNutrients.meals.find((meal) => meal.id === mealId);
     setCurrentMealBeingEdited(mealToEdit);
     setIsEditMealModalOpen(true);
@@ -418,24 +384,20 @@ const NutritionSummary = () => {
     const dateString = selectedDate.toISOString().split("T")[0];
     const docRef = doc(db, "users", user.uid, "nutritionSummaries", dateString);
 
-    // Fetch the current meals array from Firestore
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       const currentMeals = docSnap.data().meals;
-      // Find the meal with the matching ID and update it
       const updatedMeals = currentMeals.map((meal) => {
         if (meal.id === currentMealBeingEdited.id) {
-          return currentMealBeingEdited; // Updated meal
+          return currentMealBeingEdited;
         }
-        return meal; // Unchanged meal
+        return meal;
       });
 
-      // Update Firestore with the new meals array
       await updateDoc(docRef, {
         meals: updatedMeals,
       });
 
-      // Update local state to reflect the changes
       setDateNutrients((prevState) => ({
         ...prevState,
         meals: updatedMeals,
@@ -444,7 +406,7 @@ const NutritionSummary = () => {
       console.error("Document does not exist");
     }
 
-    setIsEditMealModalOpen(false); // Close the edit modal
+    setIsEditMealModalOpen(false);
   };
 
   const handleImageChange = (e) => {
@@ -464,7 +426,6 @@ const NutritionSummary = () => {
   return (
     <div className='bg-green-50 p-4 rounded-lg shadow'>
       {/* DATE */}
-
       <div className='flex justify-between items-center'>
         <div className='relative mt-2'>
           <DatePicker
@@ -480,18 +441,16 @@ const NutritionSummary = () => {
         </div>
       </div>
       <br></br>
-
       {/* PROGRESS BARS */}
-
       <div className='relative bg-white p-4 rounded-lg shadow'>
         <button
           onClick={() => setEditModalOpen(true)}
           className='absolute top-2 right-2 p-1'
         >
           <img
-            src='src/assets/editicon.png' // Replace with your actual path to the edit icon
+            src='src/assets/editicon.png'
             alt='Edit'
-            className='h-6 w-6' // Adjust size as needed
+            className='h-6 w-6'
           />
         </button>
         <p className='text-sm  text-gray-700 mb-4'>Calories 💦</p>
@@ -656,7 +615,7 @@ const NutritionSummary = () => {
                           <img
                             src={meal.image}
                             alt={`Meal ${meal.description}`}
-                            className='w-20 h-20 object-cover rounded-lg mt-6 ml-2 mb-6' // Adjust border-radius here
+                            className='w-20 h-20 object-cover rounded-lg mt-6 ml-2 mb-6'
                           />
                           <p>{meal.explanation}</p>
                           <div className='absolute right-0 top-0 flex items-center'>
@@ -667,19 +626,19 @@ const NutritionSummary = () => {
                               className='p-1 mt-2'
                             >
                               <img
-                                src='src/assets/editicon.png' // Replace with your actual path to the edit icon
+                                src='src/assets/editicon.png'
                                 alt='Edit'
-                                className='h-6 w-6' // Adjust size as needed
+                                className='h-6 w-6'
                               />
                             </button>
                             <button
                               onClick={() => handleRemoveMeal(meal.id)}
-                              className='p-1 ml-2 mr-3 mt-2' // Add margin left to separate the icons
+                              className='p-1 ml-2 mr-3 mt-2'
                             >
                               <img
-                                src='src/assets/deleteicon.png' // Replace with your actual path to the delete icon
+                                src='src/assets/deleteicon.png'
                                 alt='Delete'
-                                className='h-6 w-6' // Adjust size as needed
+                                className='h-6 w-6'
                               />
                             </button>
                           </div>
@@ -862,9 +821,8 @@ const NutritionSummary = () => {
               <div className='mt-8 flex justify-end space-x-2'>
                 <button
                   disabled={isProcessing}
-                  className={`bg-green-600 text-white px-4 py-2 border border-transparent rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${
-                    isProcessing ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
+                  className={`bg-green-600 text-white px-4 py-2 border border-transparent rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${isProcessing ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                   onClick={addMealWithImage}
                 >
                   {isProcessing ? "Processing..." : "Add Meal"}

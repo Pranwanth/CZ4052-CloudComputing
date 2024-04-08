@@ -1,8 +1,8 @@
-import ImageUpload from "/Users/shannenlee/Documents/GitHub/CZ4052-CloudComputing/src/components/ImageUpload.jsx";
-import NutritionSummary from "/Users/shannenlee/Documents/GitHub/CZ4052-CloudComputing/src/components/NutritionSummary.jsx";
 import React, { useContext, useEffect } from "react";
-import { AuthContext } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+
+import NutritionSummary from "../components/NutritionSummary";
+import { AuthContext } from "../contexts/AuthContext";
 
 const Home = () => {
   const { user } = useContext(AuthContext);
@@ -10,7 +10,7 @@ const Home = () => {
 
   useEffect(() => {
     if (!user) {
-      navigate("/login"); // If there is no user logged in, redirect to the login page
+      navigate("/login");
     }
   }, [user, navigate]);
 
