@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import app from '/Users/shannenlee/Documents/GitHub/CZ4052-CloudComputing/src/firebaseApp.js'; // Ensure this path is correct
-
+import app from '../firebaseApp';
 const Login = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -15,9 +14,9 @@ const Login = () => {
     event.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      navigate('/home'); // Navigate to the home page or dashboard on success
+      navigate('/home');
     } catch (error) {
-      setError(error.message); // Update error state to display the error message
+      setError(error.message);
     }
   };
 
@@ -30,7 +29,7 @@ const Login = () => {
       await sendPasswordResetEmail(auth, email);
       alert("Password reset email sent!");
     } catch (error) {
-      setError(error.message); // Display any errors encountered
+      setError(error.message);
     }
   };
 

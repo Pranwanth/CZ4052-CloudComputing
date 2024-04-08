@@ -1,12 +1,11 @@
-// src/contexts/AuthContext.js
-
 import React, { createContext, useState, useEffect } from "react";
 import {
   getAuth,
   onAuthStateChanged,
   signOut as firebaseSignOut,
 } from "firebase/auth";
-import app from "/Users/shannenlee/Documents/GitHub/CZ4052-CloudComputing/src/firebaseApp.js"; // adjust this import to the location of your Firebase app initialization
+
+import app from "../firebaseApp";
 
 export const AuthContext = createContext();
 
@@ -20,7 +19,6 @@ export const AuthProvider = ({ children }) => {
       setUser(user);
     });
 
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
 

@@ -11,13 +11,11 @@ const ImageUpload = ({ onImageUpload }) => {
   };
 
   const handleCameraUploadClick = () => {
-    // Open device camera for taking a picture
     fileInputRef.current.setAttribute("capture", "camera");
     fileInputRef.current.click();
   };
 
   const handleGalleryUploadClick = () => {
-    // Open device gallery for selecting an image
     fileInputRef.current.setAttribute("capture", "filesystem");
     fileInputRef.current.click();
   };
