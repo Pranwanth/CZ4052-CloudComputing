@@ -1,7 +1,9 @@
+import { createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+
 import app from '../firebaseApp';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 
 const auth = getAuth(app);
 
@@ -20,6 +22,7 @@ const Register = () => {
     }
     try {
       await createUserWithEmailAndPassword(auth, email, password);
+      toast.success("Sign Up Successful")
       navigate('/login');
     } catch (error) {
       setError(error.message);

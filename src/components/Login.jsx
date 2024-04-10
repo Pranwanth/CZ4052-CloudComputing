@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { getAuth, sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { toast } from 'react-toastify';
+
 import app from '../firebaseApp';
+
 const Login = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -14,6 +17,7 @@ const Login = () => {
     event.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      toast.success("Welcome Back")
       navigate('/home');
     } catch (error) {
       setError(error.message);
@@ -43,7 +47,7 @@ const Login = () => {
               Email address
             </label>
             <input
-              autocomplete="off"
+              autoComplete="off"
               id="email"
               name="email"
               type="email"
@@ -61,7 +65,7 @@ const Login = () => {
               id="password"
               name="password"
               type="password"
-              autocomplete="off"
+              autoComplete="off"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}

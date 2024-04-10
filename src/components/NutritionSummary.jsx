@@ -182,7 +182,8 @@ const NutritionSummary = () => {
       );
       const newMealId = doc(mealsCollectionRef).id;
       const newMeal = {
-        id: newMealId, description: mealDescription,
+        id: newMealId,
+        description: mealDescription,
         calories,
         carbs,
         fats,
@@ -201,12 +202,13 @@ const NutritionSummary = () => {
       );
 
       const docSnap = await getDoc(docRef);
-
       if (docSnap.exists()) {
+        console.log('xxNewMeal', newMeal)
         await updateDoc(docRef, {
           meals: arrayUnion(newMeal),
         });
       } else {
+        console.log('xxNewMeal', newMeal)
         await setDoc(docRef, {
           meals: [newMeal],
         });
@@ -226,9 +228,10 @@ const NutritionSummary = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dateNutrients, setDateNutrients] = useState({
     meals: [],
-    recommendedCalories: 2000,
-    recommendedCarbs: 300,
-    recommendedFats: 70, recommendedProteins: 60,
+    recommendedCalories: 2200,
+    recommendedCarbs: 247,
+    recommendedFats: 73,
+    recommendedProteins: 137,
   });
   const totalCalories =
     dateNutrients.meals && Array.isArray(dateNutrients.meals)
@@ -266,10 +269,10 @@ const NutritionSummary = () => {
       } else {
         setDateNutrients({
           meals: [],
-          recommendedCalories: 2000,
-          recommendedCarbs: 300,
-          recommendedFats: 70,
-          recommendedProteins: 60,
+          recommendedCalories: 2200,
+          recommendedCarbs: 247,
+          recommendedFats: 73,
+          recommendedProteins: 137,
         });
       }
     });
@@ -440,6 +443,16 @@ const NutritionSummary = () => {
     }
   };
 
+  const handleCalorieChange = (caloriesValue) => {
+    const new_carbs = Math.floor(Number(caloriesValue) * 0.45 / 4)
+    const new_fats = Math.floor(Number(caloriesValue) * 0.3 / 9)
+    const new_proteins = Math.floor(Number(caloriesValue) * 0.25 / 4)
+    setNewRecommendedCalories(caloriesValue)
+    setNewRecommendedCarbs(new_carbs.toString(10))
+    setNewRecommendedFats(new_fats.toString(10))
+    setNewRecommendedProteins(new_proteins.toString(10))
+  }
+
   return (
     <div className='bg-green-50 p-4 rounded-lg shadow'>
       {/* DATE */}
@@ -553,7 +566,7 @@ const NutritionSummary = () => {
                   type='number'
                   className='mt-2 text-md font-semibold cursor-pointer appearance-none bg-white pr-10 pl-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:border-green-500 w-full'
                   value={newRecommendedCalories}
-                  onChange={(e) => setNewRecommendedCalories(e.target.value)}
+                  onChange={(e) => handleCalorieChange(e.target.value)}
                 />
                 <label className='mt-6 block text-sm font-medium text-gray-700'>
                   Carbs:
