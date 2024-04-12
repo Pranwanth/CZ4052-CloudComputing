@@ -203,14 +203,16 @@ const NutritionSummary = () => {
 
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        console.log('xxNewMeal', newMeal)
         await updateDoc(docRef, {
           meals: arrayUnion(newMeal),
         });
       } else {
-        console.log('xxNewMeal', newMeal)
         await setDoc(docRef, {
           meals: [newMeal],
+          recommendedCalories: 2200,
+          recommendedCarbs: 247,
+          recommendedFats: 73,
+          recommendedProteins: 137,
         });
       }
 
@@ -289,7 +291,7 @@ const NutritionSummary = () => {
     : 0;
 
   const carbsPercentage = dateNutrients.recommendedCarbs
-    ? (totalCalories / dateNutrients.recommendedCarbs) * 100
+    ? (totalCarbs / dateNutrients.recommendedCarbs) * 100
     : 0;
 
   const fatsPercentage = dateNutrients.recommendedFats
@@ -360,6 +362,13 @@ const NutritionSummary = () => {
         const data = docSnapshot.data();
         setDateNutrients(data);
       } else {
+        setDateNutrients({
+          meals: [],
+          recommendedCalories: 2200,
+          recommendedCarbs: 247,
+          recommendedFats: 73,
+          recommendedProteins: 137,
+        });
       }
     });
 
@@ -507,7 +516,7 @@ const NutritionSummary = () => {
         <div className='w-full bg-gray-200 rounded-full h-6 dark:bg-gray-700 mb-8'>
           <div
             className='bg-green-700 h-6 rounded-full'
-            style={{ width: `${Math.min(caloriePercentage, 100)}%` }}
+            style={{ width: `${Math.min(carbsPercentage, 100)}%` }}
           ></div>
         </div>
 
